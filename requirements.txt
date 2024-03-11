@@ -1,0 +1,9 @@
+jax
+flax
+ml-collections
+tqdm
+matplotlib
+pandas
+optax
+absl-py
+jupyter
