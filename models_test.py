@@ -1,5 +1,5 @@
 from absl.testing import absltest
-from Trainer import EmbedLayer, PositionalEncoding
+from model import EmbedLayer, FeedForward, MultiHeadSelfAttention, MyLinear, PositionalEncoding
 
 from flax import linen as nn
 import jax
@@ -22,15 +22,43 @@ class TestEmbed(absltest.TestCase):
     # def testEmbedRange # should throw an out of range error for token out of range
 
 class TestPositionalEncoding(absltest.TestCase):
-   def testInitializePositionalEncoding(self):
-      encoding_layer = PositionalEncoding(max_input_length=100, features_in_embedding=300)
-      dummy_input = jnp.ones((8,40,300))
-      png = jax.random.PRNGKey(0)
-      state = encoding_layer.init(png, dummy_input)
-      # positional encoding layer has no trainable parameters
-      self.assertEqual(state, {})
-      encoded_dummy_input = encoding_layer.apply(state, dummy_input)
-      self.assertEqual(encoded_dummy_input.shape, (8,40,300))
+    def testInitializePositionalEncoding(self):
+        encoding_layer = PositionalEncoding(max_input_length=100, features_in_embedding=300)
+        dummy_input = jnp.ones((8,40,300))
+        png = jax.random.PRNGKey(0)
+        state = encoding_layer.init(png, dummy_input)
+        # positional encoding layer has no trainable parameters
+        self.assertEqual(state, {})
+        encoded_dummy_input = encoding_layer.apply(state, dummy_input)
+        self.assertEqual(encoded_dummy_input.shape, (8,40,300))
+    
+class TestMultiHeadSelfAttention(absltest.TestCase):
+    def testInitialize(self):
+        self_attention_layer = MultiHeadSelfAttention(features_in_embedding=512, head_dim=64, num_heads=8)
+        dummy_input = jnp.ones((16,40,512))
+        png = jax.random.PRNGKey(0)
+        state = self_attention_layer.init(png,dummy_input)
+        dummy_output = self_attention_layer.apply(state, dummy_input)
+        self.assertEqual(dummy_output.shape, (16,40,512))
+
+class TestMyLinear(absltest.TestCase):
+    def testInitialize(self):
+        my_linear_layer = MyLinear(input_dimensionality=512, output_dimensionality=2048)
+        dummy_input = jnp.ones((16,40,512))
+        png = jax.random.PRNGKey(0)
+        state = my_linear_layer.init(png, dummy_input)
+        dummy_output = my_linear_layer.apply(state, dummy_input)
+        self.assertEqual(dummy_output.shape, (16,40,2048))
+
+class TestFeedForward(absltest.TestCase):
+    def testInitialize(self):
+        feed_forward_layer = FeedForward(512, 2048)
+        dummy_input = jnp.ones((16,30,512))
+        png = jax.random.PRNGKey(0)
+        state = feed_forward_layer.init(png, dummy_input)
+        dummy_output = feed_forward_layer.apply(state, dummy_input)
+        self.assertEqual(dummy_output.shape, (16,30,512))
+    
 
 if __name__ == '__main__':
   absltest.main()
