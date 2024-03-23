@@ -1,5 +1,5 @@
 from absl.testing import absltest
-from model import EmbedLayer, FeedForward, MultiHeadSelfAttention, MyLayerNorm, MyLinear, PositionalEncoding
+from model import EmbedLayer, EncoderBlock, FeedForward, MultiHeadSelfAttention, MyLayerNorm, MyLinear, PositionalEncoding
 
 from flax import linen as nn
 import jax
@@ -81,6 +81,20 @@ class TestMyLayerNorm(absltest.TestCase):
         # ToDo: figure out why atol of 1e-3 is needed for the test to pass, that seems really high
         assert jnp.allclose(output_sample_wise_mean, jnp.zeros_like(output_sample_wise_mean), atol=1e-3)
         assert jnp.allclose(output_sample_wise_std, jnp.ones_like(output_sample_wise_std))
+
+
+class TestEncoderBlock(absltest.TestCase):
+    def testInitialize(self):
+        encoder_block_layer = EncoderBlock(
+            features_in_embedding=512, 
+            num_heads=8, 
+            feed_forward_dimension=2048
+        )
+        png = jax.random.PRNGKey(0)
+        dummy_input = jax.random.uniform(png, shape=(16,30,512))
+        state = encoder_block_layer.init(png, dummy_input)
+        dummy_output = encoder_block_layer.apply(state, dummy_input)
+        self.assertEqual(dummy_input.shape, dummy_output.shape)
 
 if __name__ == '__main__':
   absltest.main()

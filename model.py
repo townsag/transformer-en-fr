@@ -243,6 +243,7 @@ class EncoderBlock(nn.Module):
     num_heads: int
     feed_forward_dimension: int
 
+
     def setup(self):
         # ToDo: asserts dont work on accelerator, use Chex
         assert self.features_in_embedding % self.num_heads == 0, \
@@ -257,5 +258,19 @@ class EncoderBlock(nn.Module):
             features_in_embedding=self.features_in_embedding,
             feed_forward_dimension=self.feed_forward_dimension
         )
+        self.first_layer_norm_layer = MyLayerNorm(
+            input_dimensionality=self.features_in_embedding
+        )
+        self.second_layer_norm_layer = MyLayerNorm(
+            input_dimensionality=self.features_in_embedding
+        )
     
-    # def __call__(self, x):
+    def __call__(self, x):
+        # LayerNorm(x + Sublayer(x))
+        multihead_attention_values = self.attention_layer(x)
+        values_and_residuals = x + multihead_attention_values
+        normalized_sublayer_output = self.first_layer_norm_layer(values_and_residuals)
+        feed_forward_output = self.feed_forward_layer(normalized_sublayer_output)
+        feed_forward_and_residuals = normalized_sublayer_output + feed_forward_output
+        normalized_second_sublayer_output = self.second_layer_norm_layer(feed_forward_and_residuals)
+        return normalized_second_sublayer_output
