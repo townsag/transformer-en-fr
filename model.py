@@ -210,6 +210,34 @@ class FeedForward(nn.Module):
         activation = self.layers[1](activation)
         return jnp.asarray(activation, dtype=self.output_dtype)
 
+class MyLayerNorm(nn.Module):
+    input_dimensionality: int
+    epsilon: Optional[int] = 1e-10
+    bias_init: Optional[Initializer] = nn.initializers.zeros_init()
+    gain_init: Optional[Initializer] = nn.initializers.ones_init()
+    param_dtype: Optional[Dtype] = jnp.float32
+    output_dtype: Optional[Dtype] = jnp.float32
+
+    def setup(self):
+        self.gain = self.param(
+            "gain",
+            self.gain_init,
+            (self.input_dimensionality,),
+            self.param_dtype
+        )
+        self.bias = self.param(
+            "bias",
+            self.bias_init,
+            (self.input_dimensionality,),
+            self.param_dtype
+        )
+    def __call__(self, x):
+        sample_wise_mean = jnp.mean(x, axis=-1, keepdims=True)
+        sample_wise_std = jnp.sqrt(jnp.mean(jnp.square(x - sample_wise_mean), axis=-1, keepdims=True))
+        sample_wise_normalized_x = (x - sample_wise_mean) / (sample_wise_std + self.epsilon)
+        activation = jnp.multiply(self.gain, (sample_wise_normalized_x + self.bias))
+        return jnp.asarray(activation, dtype=self.output_dtype)
+
 class EncoderBlock(nn.Module):
     features_in_embedding: int
     num_heads: int
