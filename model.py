@@ -7,13 +7,13 @@ from jax import numpy as jnp
 import jax
 import math
 
-
+default_embed_init = nn.initializers.variance_scaling(1.0, 'fan_in', 'normal', out_axis=0)
 default_kernel_init = nn.initializers.lecun_normal()
 
 class EmbedLayer(nn.Module):
     vocab_size: int
     features_in_embedding: int
-    embedding_initializer: Initializer
+    embedding_initializer: Optional[Initializer] = default_embed_init
     param_dtype: Optional[Dtype] = jnp.float32
     result_dtype: Optional[Dtype] = jnp.float32
 
@@ -274,3 +274,34 @@ class EncoderBlock(nn.Module):
         feed_forward_and_residuals = normalized_sublayer_output + feed_forward_output
         normalized_second_sublayer_output = self.second_layer_norm_layer(feed_forward_and_residuals)
         return normalized_second_sublayer_output
+
+class Encoder(nn.Module):
+    vocab_size: int
+    features_in_embedding: int
+    max_input_length:int
+    num_heads: int
+    feed_forward_dimension: int
+    num_encoder_blocks: int
+    def setup(self):
+        self.embed_layer = EmbedLayer(
+            vocab_size=self.vocab_size, 
+            features_in_embedding=self.features_in_embedding
+        )
+        self.positional_encoding_layer = PositionalEncoding(
+            max_input_length=self.max_input_length, 
+            features_in_embedding=self.features_in_embedding
+        )
+        self.encoder_blocks = [
+            EncoderBlock(
+                features_in_embedding=self.features_in_embedding,
+                num_heads=self.num_heads,
+                feed_forward_dimension=self.feed_forward_dimension
+            ) for i in range(self.num_encoder_blocks)
+        ]
+    
+    def __call__(self, x):
+        embedded_inputs = self.embed_layer(x)
+        activation = self.positional_encoding_layer(embedded_inputs)
+        for layer in self.encoder_blocks:
+            activation = layer(activation)
+        return activation

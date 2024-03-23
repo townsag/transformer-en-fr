@@ -1,6 +1,14 @@
 from absl.testing import absltest
-from model import EmbedLayer, EncoderBlock, FeedForward, MultiHeadSelfAttention, MyLayerNorm, MyLinear, PositionalEncoding
-
+from model import( 
+    EmbedLayer, 
+    Encoder, 
+    EncoderBlock, 
+    FeedForward, 
+    MultiHeadSelfAttention, 
+    MyLayerNorm, 
+    MyLinear, 
+    PositionalEncoding
+)
 from flax import linen as nn
 import jax
 from jax import numpy as jnp
@@ -95,6 +103,22 @@ class TestEncoderBlock(absltest.TestCase):
         state = encoder_block_layer.init(png, dummy_input)
         dummy_output = encoder_block_layer.apply(state, dummy_input)
         self.assertEqual(dummy_input.shape, dummy_output.shape)
+
+class TestEncoder(absltest.TestCase):
+    def testInitialize(self):
+        encoder = Encoder(
+            vocab_size=4000, 
+            features_in_embedding=512, 
+            max_input_length=200, 
+            num_heads=8, 
+            feed_forward_dimension=2048, 
+            num_encoder_blocks=6
+        )
+        prng = jax.random.PRNGKey(0)
+        dummy_input = jax.random.randint(prng, (2,10), 1, 20)
+        state = encoder.init(prng, dummy_input)
+        dummy_input = encoder.apply(state, dummy_input)
+        self.assertEqual(dummy_input.shape, (2,10,512))
 
 if __name__ == '__main__':
   absltest.main()
